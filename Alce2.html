@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+  <title>ALCE — Nexus</title>
+
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+
+    body {
+
+      margin: 0;
+
+      min-height: 100vh;
+
+      font-family:
+        Georgia,
+        "Times New Roman",
+        serif;
+
+      background:
+        #f2eee4;
+
+      color:
+        #252b35;
+
+    }
+
+
+    .pagina {
+
+      width: min(980px, 92%);
+
+      margin: 0 auto;
+
+      padding: 38px 0 45px;
+
+    }
+
+
+    /* ============================================================
+       CABEÇALHO
+       ============================================================ */
+
+    .cabecalho {
+
+      text-align: center;
+
+      margin-bottom: 34px;
+
+    }
+
+
+    .logo {
+
+      display: block;
+
+      width: min(330px, 72%);
+
+      max-height: 360px;
+
+      object-fit: contain;
+
+      margin: 0 auto 12px;
+
+    }
+
+
+    .ornamento {
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: center;
+
+      gap: 14px;
+
+      margin: 18px auto 0;
+
+      color:
+        #b08a38;
+
+      font-size: 16px;
+
+    }
+
+
+    .ornamento::before,
+    .ornamento::after {
+
+      content: "";
+
+      display: block;
+
+      width: 85px;
+
+      height: 1px;
+
+      background:
+        #b08a38;
+
+      opacity: 0.65;
+
+    }
+
+
+    /* ============================================================
+       ÁREA PRINCIPAL
+       ============================================================ */
+
+    .painel {
+
+      background:
+        #fffdf8;
+
+      border:
+        1px solid #d4c8ad;
+
+      border-radius: 4px;
+
+      padding: 32px;
+
+      box-shadow:
+        0 5px 20px
+        rgba(27, 38, 52, 0.08);
+
+      position: relative;
+
+    }
+
+
+    .painel::before {
+
+      content: "";
+
+      display: block;
+
+      height: 3px;
+
+      background:
+        #b08a38;
+
+      margin:
+        -32px -32px 28px;
+
+    }
+
+
+    .painel h2 {
+
+      margin:
+        0 0 24px;
+
+      font-size: 27px;
+
+      font-weight: normal;
+
+      color:
+        #1d3048;
+
+    }
+
+
+    /* ============================================================
+       CONTROLE
+       ============================================================ */
+
+    .controle {
+
+      display: flex;
+
+      gap: 14px;
+
+      align-items: end;
+
+      flex-wrap: wrap;
+
+    }
+
+
+    .campo {
+
+      flex: 1;
+
+      min-width: 220px;
+
+    }
+
+
+    .campo label {
+
+      display: block;
+
+      margin-bottom: 7px;
+
+      font-size: 15px;
+
+      color:
+        #4f5968;
+
+    }
+
+
+    select,
+    button {
+
+      width: 100%;
+
+      padding: 11px 13px;
+
+      font: inherit;
+
+      font-size: 16px;
+
+      border-radius: 4px;
+
+    }
+
+
+    select {
+
+      border:
+        1px solid #c8c0b2;
+
+      background:
+        #ffffff;
+
+      color:
+        #252b35;
+
+    }
+
+
+    select:focus {
+
+      outline: none;
+
+      border-color:
+        #9f7b32;
+
+    }
+
+
+    button {
+
+      border:
+        1px solid #1d3048;
+
+      background:
+        #1d3048;
+
+      color:
+        white;
+
+      cursor: pointer;
+
+      transition:
+        background 0.15s ease,
+        border-color 0.15s ease;
+
+    }
+
+
+    button:hover {
+
+      background:
+        #263d5b;
+
+      border-color:
+        #263d5b;
+
+    }
+
+
+    .botao {
+
+      width: 150px;
+
+    }
+
+
+    /* ============================================================
+       MENSAGEM
+       ============================================================ */
+
+    #mensagem {
+
+      margin-top: 20px;
+
+      color:
+        #626b78;
+
+    }
+
+
+    .erro {
+
+      color:
+        #8a3028 !important;
+
+    }
+
+
+    /* ============================================================
+       RESULTADO
+       ============================================================ */
+
+    #resultado {
+
+      margin-top: 30px;
+
+    }
+
+
+    .titulo-lista {
+
+      font-size: 23px;
+
+      color:
+        #1d3048;
+
+      margin-bottom: 15px;
+
+      padding-bottom: 10px;
+
+      border-bottom:
+        1px solid #d9cfbc;
+
+    }
+
+
+    .registro {
+
+      border-top:
+        1px solid #e0d9cc;
+
+      padding: 17px 0;
+
+    }
+
+
+    .registro:first-child {
+
+      border-top: none;
+
+    }
+
+
+    .nome {
+
+      font-size: 19px;
+
+      margin-bottom: 8px;
+
+      color:
+        #27384d;
+
+    }
+
+
+    .detalhes {
+
+      font-size: 15px;
+
+      line-height: 1.6;
+
+      color:
+        #625f59;
+
+    }
+
+
+    .detalhes strong {
+
+      color:
+        #414b58;
+
+    }
+
+
+    .vazio {
+
+      padding: 20px 0;
+
+      color:
+        #6d675e;
+
+      font-style: italic;
+
+    }
+
+
+/* ============================================================
+   FEEDBACK
+   ============================================================ */
+
+.feedback {
+
+  margin-top: 30px;
+
+  padding-top: 25px;
+
+  border-top:
+    1px solid #d9cfbc;
+
+}
+
+.feedback-titulo {
+
+  font-size: 23px;
+
+  color:
+    #1d3048;
+
+  margin-bottom: 8px;
+
+}
+
+.feedback-descricao {
+
+  font-size: 15px;
+
+  color:
+    #6d675e;
+
+  margin-bottom: 15px;
+
+}
+
+.feedback textarea {
+
+  display: block;
+
+  width: 100%;
+
+  min-height: 130px;
+
+  padding: 12px;
+
+  resize: vertical;
+
+  font: inherit;
+
+  font-size: 15px;
+
+  line-height: 1.5;
+
+  border:
+    1px solid #c8c0b2;
+
+  border-radius: 4px;
+
+  background:
+    #ffffff;
+
+  color:
+    #252b35;
+
+}
+
+.feedback textarea:focus {
+
+  outline: none;
+
+  border-color:
+    #9f7b32;
+
+}
+
+.feedback button {
+
+  width: 190px;
+
+  margin-top: 12px;
+
+}
+
+.mensagem-feedback {
+
+  margin-top: 12px;
+
+  font-size: 14px;
+
+  color:
+    #626b78;
+
+}
+
+.mensagem-feedback.sucesso {
+
+  color:
+    #3f6844;
+
+}
+
+    /* ============================================================
+       RODAPÉ
+       ============================================================ */
+
+    .rodape {
+
+      text-align: center;
+
+      margin-top: 28px;
+
+      font-size: 13px;
+
+      color:
+        #77736b;
+
+      letter-spacing: 0.5px;
+
+    }
+
+
+    /* ============================================================
+       RESPONSIVO
+       ============================================================ */
+
+    @media (max-width: 600px) {
+
+      .pagina {
+
+        width: 94%;
+
+        padding:
+          25px 0 35px;
+
+      }
+
+
+      .logo {
+
+        width: min(270px, 80%);
+
+        margin-bottom: 8px;
+
+      }
+
+
+      .ornamento::before,
+      .ornamento::after {
+
+        width: 55px;
+
+      }
+
+
+      .painel {
+
+        padding: 22px;
+
+      }
+
+
+      .painel::before {
+
+        margin:
+          -22px -22px 22px;
+
+      }
+
+
+      .painel h2 {
+
+        font-size: 24px;
+
+      }
+
+
+      .botao {
+
+        width: 100%;
+
+      }
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+
+  <main class="pagina">
+
+
+    <!-- ==========================================================
+         CABEÇALHO
+         ========================================================== -->
+
+    <header class="cabecalho">
+
+
+      <img
+        class="logo"
+        src="https://fr-pius.github.io/Alce/logo_nexus.png"
+        alt="ALCE — Nexus">
+
+
+      <div class="ornamento">
+        ◆
+      </div>
+
+
+    </header>
+
+
+    <!-- ==========================================================
+         CONSULTA
+         ========================================================== -->
+
+    <section class="painel">
+
+
+      <h2>
+        Lista de chegadas
+      </h2>
+
+
+      <div class="controle">
+
+
+        <div class="campo">
+
+          <label for="mes">
+            Mês
+          </label>
+
+
+          <select id="mes">
+
+            <option value="1">
+              Janeiro
+            </option>
+
+            <option value="2">
+              Fevereiro
+            </option>
+
+            <option value="3">
+              Março
+            </option>
+
+            <option value="4">
+              Abril
+            </option>
+
+            <option value="5">
+              Maio
+            </option>
+
+            <option value="6">
+              Junho
+            </option>
+
+            <option value="7">
+              Julho
+            </option>
+
+            <option value="8">
+              Agosto
+            </option>
+
+            <option value="9">
+              Setembro
+            </option>
+
+            <option value="10">
+              Outubro
+            </option>
+
+            <option value="11">
+              Novembro
+            </option>
+
+            <option value="12">
+              Dezembro
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <div class="botao">
+
+          <button
+            onclick="consultarChegadas()">
+
+            Consultar
+
+          </button>
+
+        </div>
+
+
+      </div>
+
+
+      <div id="mensagem"></div>
+
+      <div id="resultado"></div>
+
+       <div
+    class="controles-impressao"
+    id="controlesImpressao"
+    style="display: none;">
+
+    <button onclick="imprimirChegadas()">
+      Imprimir
+    </button>
+
+  </div>
+
+   <div id="resultado"></div>
+
+<div
+  class="controles-impressao"
+  id="controlesImpressao"
+  style="display: none;">
+
+  <button onclick="imprimirChegadas()">
+    Imprimir
+  </button>
+
+</div>
+
+
+    <!-- ==========================================================
+         RODAPÉ
+         ========================================================== -->
+
+    <footer class="rodape">
+
+      ALCE · Nexus
+
+    </footer>
+
+
+  </main>
+
+
+  <script>
+
+
+    // ============================================================
+    // CONSULTA AO NEXUS
+    // ============================================================
+   let ultimaConsulta = null;
+    function consultarChegadas() {
+
+
+      const mes =
+        document.getElementById("mes").value;
+
+
+      const mensagem =
+        document.getElementById("mensagem");
+
+
+      const resultado =
+        document.getElementById("resultado");
+
+
+      mensagem.className = "";
+
+      mensagem.textContent =
+        "Consultando o Nexus...";
+
+
+      resultado.innerHTML = "";
+
+
+      google.script.run
+
+        .withSuccessHandler(function(dados) {
+
+  ultimaConsulta = {
+
+    lista: dados,
+
+    nomeMes:
+      obterNomeMesInterface(
+        Number(mes)
+      )
+
+  };
+
+  mostrarListaChegadas({
+
+    sistema: "Nexus",
+
+    mes: Number(mes),
+
+    nomeMes:
+      ultimaConsulta.nomeMes,
+
+    lista:
+      ultimaConsulta.lista
+
+  });
+
+  mensagem.textContent =
+    "Consulta realizada com sucesso.";
+
+  document
+    .getElementById(
+      "controlesImpressao"
+    )
+    .style.display = "block";
+
+})
+
+
+        .withFailureHandler(function(erro) {
+
+          mensagem.className =
+            "erro";
+
+
+          mensagem.textContent =
+            "Não foi possível consultar o Nexus: " +
+            erro.message;
+
+        })
+
+
+        .consultarChegadasPeloAlce(mes);
+
+    }
+
+
+    function obterNomeMesInterface(mes) {
+
+      const meses = [
+
+        "",
+
+        "Janeiro",
+
+        "Fevereiro",
+
+        "Março",
+
+        "Abril",
+
+        "Maio",
+
+        "Junho",
+
+        "Julho",
+
+        "Agosto",
+
+        "Setembro",
+
+        "Outubro",
+
+        "Novembro",
+
+        "Dezembro"
+
+      ];
+
+
+      return meses[mes] || "";
+
+    }
+
+
+    // ============================================================
+    // APRESENTAÇÃO
+    // ============================================================
+
+    function mostrarListaChegadas(dados) {
+
+
+      const resultado =
+        document.getElementById("resultado");
+
+
+      resultado.innerHTML = "";
+
+
+      const titulo =
+        document.createElement("div");
+
+
+      titulo.className =
+        "titulo-lista";
+
+
+      titulo.textContent =
+        "Chegadas — " +
+        dados.nomeMes;
+
+
+      resultado.appendChild(titulo);
+
+
+      if (
+        !dados.lista ||
+        dados.lista.length === 0
+      ) {
+
+
+        const vazio =
+          document.createElement("div");
+
+
+        vazio.className =
+          "vazio";
+
+
+        vazio.textContent =
+          "Não há chegadas previstas para este mês.";
+
+
+        resultado.appendChild(vazio);
+
+
+        return;
+
+      }
+
+
+      dados.lista.forEach(
+        function(registro) {
+
+
+          const bloco =
+            document.createElement("div");
+
+
+          bloco.className =
+            "registro";
+
+
+          const nome =
+            document.createElement("div");
+
+
+          nome.className =
+            "nome";
+
+
+          nome.textContent =
+            registro.nome ||
+            "Nome não informado";
+
+
+          const detalhes =
+            document.createElement("div");
+
+
+          detalhes.className =
+            "detalhes";
+
+
+          detalhes.innerHTML =
+
+  "<strong>Chegada:</strong> " +
+  formatarData(registro.chegada) +
+
+  "<br>" +
+
+  "<strong>Partida:</strong> " +
+  formatarData(registro.partida) +
+
+  "<br>" +
+
+  "<strong>Estado:</strong> " +
+  escaparHtml(
+    registro.estado || ""
+  ) +
+
+  "<br>" +
+
+  "<strong>Motivo:</strong> " +
+  escaparHtml(
+    registro.motivo || ""
+  );
+
+
+          bloco.appendChild(nome);
+
+          bloco.appendChild(detalhes);
+
+
+          resultado.appendChild(bloco);
+
+        }
+      );
+
+    }
+
+
+    // ============================================================
+    // DATAS
+    // ============================================================
+
+    function formatarData(valor) {
+
+
+      if (!valor) {
+
+        return "Não informada";
+
+      }
+
+
+      const data =
+        new Date(valor);
+
+
+      if (
+        isNaN(
+          data.getTime()
+        )
+      ) {
+
+        return valor;
+
+      }
+
+
+      return data.toLocaleString(
+        "pt-BR",
+        {
+          dateStyle: "short",
+          timeStyle: "short"
+        }
+      );
+
+    }
+
+
+    // ============================================================
+    // SEGURANÇA
+    // ============================================================
+
+    function escaparHtml(texto) {
+
+
+      return texto
+
+        .replace(
+          /&/g,
+          "&amp;"
+        )
+
+        .replace(
+          /</g,
+          "&lt;"
+        )
+
+        .replace(
+          />/g,
+          "&gt;"
+        )
+
+        .replace(
+          /"/g,
+          "&quot;"
+        )
+
+        .replace(
+          /'/g,
+          "&#039;"
+        );
+
+    }
+
+    // =========================================================
+// ABRIR FOLHA DE CHEGADAS
+// =========================================================
+
+function imprimirChegadas() {
+
+  if (!ultimaConsulta) {
+
+    return;
+
+  }
+
+  const lista =
+    ultimaConsulta.lista;
+    
+  const nomeMes =
+    ultimaConsulta.nomeMes;
+
+
+  google.script.run
+
+    .withSuccessHandler(function(url) {
+
+      window.open(
+        url,
+        "_blank"
+      );
+
+    })
+
+    .withFailureHandler(function(erro) {
+
+      alert(
+        "Não foi possível abrir a folha de impressão: " +
+        erro.message
+      );
+
+    })
+
+    .prepararFolhaChegadas(
+      lista,
+      nomeMes
+    );
+
+}
+
+function enviarFeedback() {
+
+  const campo =
+    document.getElementById("comentario");
+
+  const mensagem =
+    document.getElementById("mensagemFeedback");
+
+  const comentario =
+    campo.value.trim();
+
+  if (!comentario) {
+
+    mensagem.className =
+      "mensagem-feedback erro";
+
+    mensagem.textContent =
+      "Por favor, escreva um comentário.";
+
+    return;
+  }
+
+  mensagem.className =
+    "mensagem-feedback";
+
+  mensagem.textContent =
+    "Enviando comentário...";
+
+  google.script.run
+
+    .withSuccessHandler(function() {
+
+      campo.value = "";
+
+      mensagem.className =
+        "mensagem-feedback sucesso";
+
+      mensagem.textContent =
+        "Comentário enviado. Muito obrigado!";
+
+    })
+
+    .withFailureHandler(function(erro) {
+
+      mensagem.className =
+        "mensagem-feedback erro";
+
+      mensagem.textContent =
+        "Não foi possível enviar o comentário: " +
+        erro.message;
+
+    })
+
+    .registrarFeedback(comentario);
+}
+
+  </script>
+
+
+</body>
+
+</html>

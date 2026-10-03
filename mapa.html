@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mosteiro da Santa Cruz — Mapa</title>
+<style>
+  :root {
+    --gold: #d9b56b;
+    --gold-light: #f0d89b;
+    --ink: #101923;
+    --ink-2: #172532;
+    --parchment: #ead9b5;
+    --white: #f8f3e8;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #091019;
+    color: var(--white);
+    font-family: Georgia, "Times New Roman", serif;
+  }
+
+  #game {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: #091019;
+  }
+
+  #mapViewport {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    cursor: default;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /*
+    The artwork is 3:2. The stage keeps exactly that aspect ratio,
+    so hotspots and scenery always scale together without drifting.
+  */
+  #mapStage {
+    position: relative;
+    width: min(100vw, 150vh);
+    aspect-ratio: 3 / 2;
+    flex: 0 0 auto;
+  }
+
+  #mapImage {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  /* Decorative darkening that keeps the map visible. */
+  #vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(to bottom, rgba(4,8,12,.42), transparent 18%, transparent 76%, rgba(4,8,12,.50)),
+      radial-gradient(ellipse at center, transparent 50%, rgba(3,7,11,.40) 100%);
+  }
+
+  /* A iluminação acompanha a hora real. O efeito fica sobre a arte,
+     mas abaixo das etiquetas e dos menus da interface. */
+  #timeOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    background: rgba(5,10,20,0);
+    transition: background 1.5s ease;
+  }
+
+  #game.night #timeOverlay {
+    background: rgba(5,10,24,.48);
+  }
+
+  #game.dawn #timeOverlay,
+  #game.dusk #timeOverlay {
+    background: rgba(35,20,10,.16);
+  }
+
+  #topBar {
+    position: absolute;
+    left: 18px;
+    top: 16px;
+    max-width: min(520px, calc(100vw - 36px));
+    padding: 13px 24px 12px;
+    background: linear-gradient(135deg, rgba(9,17,26,.96), rgba(18,30,41,.92));
+    border: 1px solid var(--gold);
+    border-radius: 5px 26px 26px 5px;
+    box-shadow: 0 7px 24px rgba(0,0,0,.35);
+    z-index: 20;
+  }
+
+  #topBar .title {
+    font-size: clamp(20px, 2.3vw, 31px);
+    letter-spacing: .03em;
+  }
+
+  #topBar .subtitle {
+    margin-top: 3px;
+    color: var(--gold-light);
+    font-style: italic;
+    font-size: clamp(13px, 1.3vw, 17px);
+  }
+
+  /* Painel-resumo do mosteiro: compacto, ornamentado e discreto para não cobrir o mapa. */
+  #monasteryPanel {
+    position: absolute;
+    left: 14px;
+    bottom: 18px;
+    width: min(255px, calc(100vw - 28px));
+    padding: 8px 10px 9px;
+    z-index: 20;
+    color: #eee8da;
+    background:
+      linear-gradient(135deg, rgba(7,16,25,.97), rgba(18,30,41,.94));
+    border: 1px solid var(--gold);
+    border-radius: 6px 16px 6px 16px;
+    box-shadow: 0 7px 22px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+
+  /* Filetes ornamentais discretos, inspirados no painel da referência. */
+  #monasteryPanel::before,
+  #monasteryPanel::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    border: 1px solid rgba(217,181,107,.55);
+  }
+
+  #monasteryPanel::before {
+    inset: 3px;
+    border-radius: 4px 13px 4px 13px;
+  }
+
+  #monasteryPanel::after {
+    left: 0;
+    top: 50%;
+    width: 3px;
+    height: 24px;
+    transform: translateY(-50%);
+    background: var(--gold);
+    border: 0;
+  }
+
+  .panelHeading {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .panelThumb {
+    flex: 0 0 52px;
+    width: 52px;
+    height: 38px;
+    object-fit: cover;
+    object-position: 48% 48%;
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+    box-shadow: 0 2px 7px rgba(0,0,0,.45);
+  }
+
+  #monasteryPanel .panelName {
+    font-size: 16px;
+    line-height: 1.05;
+    letter-spacing: .01em;
+  }
+
+  #monasteryPanel .panelDescription {
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+    border-bottom: 1px solid rgba(217,181,107,.55);
+    color: #d9d1c1;
+    font-size: 9px;
+    line-height: 1.18;
+  }
+
+  #monasteryPanel .panelSectionTitle {
+    color: var(--gold-light);
+    font-size: 12px;
+    margin-bottom: 2px;
+    letter-spacing: .02em;
+  }
+
+  .monasteryStats {
+    display: grid;
+    gap: 0;
+  }
+
+  .monasteryStat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 23px;
+    border-top: 1px solid rgba(217,181,107,.20);
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  .monasteryStat:first-child {
+    border-top: 0;
+  }
+
+  .monasteryStat .statIcon {
+    width: 17px;
+    min-width: 17px;
+    text-align: center;
+    color: var(--gold-light);
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .monasteryStat .statValue {
+    margin-left: auto;
+    color: #f1e2ba;
+    font-weight: bold;
+    font-size: 10px;
+  }
+
+  .panelSvgIcon {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vertical-align: middle;
+  }
+
+  #hint {
+    position: absolute;
+    left: 50%;
+    bottom: 92px;
+    transform: translateX(-50%);
+    z-index: 30;
+    padding: 8px 18px;
+    border: 1px solid rgba(217,181,107,.65);
+    border-radius: 20px;
+    background: rgba(9,17,26,.82);
+    color: #eee5d1;
+    font-size: 14px;
+    pointer-events: none;
+    opacity: .9;
+    transition: opacity .5s;
+  }
+
+  #hint.hidden { opacity: 0; }
+
+  /*
+    Hotspots are deliberately separate from the artwork.
+    Their coordinates use percentages, so the map can scale with the screen.
+  */
+  /* Hotspots: o ponto fica exatamente na construção; a etiqueta fica fora da arte. */
+  .hotspot {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    transform: translate(-50%, -50%);
+    border: 0;
+    background: transparent;
+    cursor: default;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  /* Marcador em estilo RPG, usando o dourado já empregado pela interface. */
+  .hotspot::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: var(--gold-light);
+    border: 2px solid var(--gold);
+    box-shadow: 0 0 0 2px rgba(9,18,27,.75), 0 0 8px rgba(217,181,107,.7);
+  }
+
+  /* A barra é uma pequena haste dourada, como os filetes da interface. */
+  .hotspot::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    width: 2px;
+    height: 30px;
+    transform: translateX(-50%);
+    background: linear-gradient(to top, var(--gold-light), rgba(217,181,107,.12));
+    box-shadow: 0 0 3px rgba(0,0,0,.6);
+  }
+
+  .hotspot .label {
+    position: absolute;
+    left: 50%;
+    bottom: 37px;
+    transform: translateX(-50%);
+    min-width: 105px;
+    padding: 6px 10px;
+    color: var(--white);
+    background: rgba(9,18,27,.91);
+    border: 1px solid var(--gold);
+    border-radius: 7px;
+    font-size: clamp(12px, 1.05vw, 15px);
+    text-align: center;
+    line-height: 1.1;
+    box-shadow: 0 4px 14px rgba(0,0,0,.42);
+    text-shadow: 0 1px 2px #000;
+    pointer-events: auto;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .hotspot .small {
+    display: block;
+    margin-top: 3px;
+    color: var(--gold-light);
+    font-size: .76em;
+  }
+
+  .hotspot:hover::before, .hotspot:focus-visible::before {
+    width: 9px;
+    height: 9px;
+    box-shadow: 0 0 0 2px rgba(9,18,27,.78), 0 0 12px rgba(240,216,155,.95);
+  }
+
+  /* Pontos reais, revistos diretamente sobre a imagem 1536x1024. */
+  #hs-hospedaria { left: 41.0%; top: 18.5%; }
+  #hs-capela     { left: 51.0%; top: 38.0%; }
+  #hs-professos  { left: 34.5%; top: 53.5%; }
+  #hs-bloco4     { left: 66.5%; top: 47.0%; }
+  #hs-novicos    { left: 72.5%; top: 56.5%; }
+  #hs-bloco6     { left: 68.0%; top: 65.5%; }
+  #hs-bloco2     { left: 58.5%; top: 68.5%; }
+  #hs-isolada    { left: 16.0%; top: 69.0%; }
+
+  /* Cada etiqueta usa o espaço livre mais próximo, sem deslocar o ponto. */
+  #hs-hospedaria .label { transform: translateX(-65%); }
+  #hs-capela .label     { transform: translateX(-5%); }
+  #hs-professos .label  { transform: translateX(-65%); }
+  #hs-bloco4 .label     { transform: translateX(-30%); }
+  #hs-novicos .label    { transform: translateX(-15%); }
+  #hs-bloco6 .label     { transform: translateX(-70%); }
+  #hs-bloco2 .label     { transform: translateX(-55%); }
+  #hs-isolada .label    { transform: translateX(-15%); }
+
+  #bottomNav {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: stretch;
+    z-index: 25;
+    background: rgba(9,17,26,.94);
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+
+  .navButton {
+    min-width: 116px;
+    padding: 12px 18px 10px;
+    border: 0;
+    border-right: 1px solid rgba(217,181,107,.35);
+    background: transparent;
+    color: #efe8d8;
+    font: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  .navButton:last-child { border-right: 0; }
+
+  .navButton:hover {
+    background: rgba(217,181,107,.12);
+    color: var(--gold-light);
+  }
+
+  .navIcon {
+    display: block;
+    font-size: 20px;
+    margin-bottom: 2px;
+  }
+
+  #sidePanel {
+    position: absolute;
+    right: 18px;
+    bottom: 92px;
+    width: min(360px, calc(100vw - 36px));
+    max-height: calc(100vh - 180px);
+    overflow: auto;
+    z-index: 40;
+    padding: 22px;
+    color: #16120d;
+    background:
+      linear-gradient(rgba(234,217,181,.97), rgba(224,202,157,.97));
+    border: 2px solid #9e7b3d;
+    border-radius: 8px;
+    box-shadow: 0 12px 38px rgba(0,0,0,.5);
+    transform: translateX(115%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .25s ease, opacity .25s ease;
+  }
+
+  #sidePanel.open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  #panelClose {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    border: 0;
+    background: transparent;
+    color: #513c1e;
+    font-size: 24px;
+    cursor: pointer;
+  }
+
+  #panelIcon {
+    font-size: 28px;
+    margin-bottom: 2px;
+  }
+
+  #panelTitle {
+    margin: 0 28px 4px 0;
+    color: #1b2024;
+    font-size: 27px;
+  }
+
+  #panelSubtitle {
+    color: #735a2e;
+    font-style: italic;
+    margin-bottom: 15px;
+  }
+
+  #panelText {
+    line-height: 1.48;
+    font-size: 16px;
+  }
+
+  .statGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 15px;
+  }
+
+  .stat {
+    padding: 9px;
+    border: 1px solid rgba(115,90,46,.45);
+    border-radius: 5px;
+    background: rgba(255,248,226,.45);
+  }
+
+  .stat strong {
+    display: block;
+    font-size: 18px;
+  }
+
+  .panelAction {
+    width: 100%;
+    margin-top: 16px;
+    padding: 11px 14px;
+    border: 1px solid #705321;
+    border-radius: 5px;
+    background: #182633;
+    color: #f3e5bf;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .panelAction:hover {
+    background: #263b4d;
+  }
+
+  #toast {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 50;
+    display: none;
+    padding: 18px 25px;
+    border: 1px solid var(--gold);
+    border-radius: 8px;
+    background: rgba(8,15,22,.96);
+    color: white;
+    box-shadow: 0 10px 35px rgba(0,0,0,.55);
+    text-align: center;
+  }
+
+  #toast.show { display: block; }
+
+  @media (max-width: 800px) {
+    #topBar { left: 10px; top: 10px; padding: 9px 15px; }
+    #monasteryPanel { left: 10px; bottom: 76px; width: min(235px, calc(100vw - 20px)); }
+    #bottomNav { bottom: 8px; width: calc(100vw - 16px); }
+    .navButton { min-width: 0; flex: 1; padding: 9px 6px; font-size: 12px; }
+    .navIcon { font-size: 17px; }
+    #hint { bottom: 68px; font-size: 12px; }
+    .hotspot { min-width: 78px; padding: 5px 7px; }
+  }
+</style>
+</head>
+
+<body>
+<div id="game">
+
+  <div id="timeOverlay"></div>
+
+  <div id="mapViewport">
+    <div id="mapStage">
+      <img id="mapImage" img src="https://raw.githubusercontent.com/fr-pius/Alce/main/mosteiro_mapa.png" alt="Mapa do Mosteiro">
+      <div id="vignette"></div>
+
+      <button class="hotspot" id="hs-hospedaria" data-place="hospedaria">
+      <span class="label">Hospedaria<span class="small">6 celas</span></span>
+    </button>
+
+    <button class="hotspot" id="hs-capela" data-place="capela">
+      <span class="label">Capela<span class="small">Entrada da clausura</span></span>
+    </button>
+
+    <button class="hotspot" id="hs-professos" data-place="professos">
+      <span class="label">Professos<span class="small">15 celas</span></span>
+    </button>
+
+    <button class="hotspot" id="hs-bloco4" data-place="bloco4">
+      <span class="label">Bloco 4<span class="small">4 celas</span></span>
+    </button>
+
+    <button class="hotspot" id="hs-novicos" data-place="novicos">
+      <span class="label">Noviços<span class="small">8 celas</span></span>
+    </button>
+
+    <button class="hotspot" id="hs-bloco6" data-place="bloco6">
+      <span class="label">Bloco 6<span class="small">6 celas</span></span>
+    </button>
+
+    <button class="hotspot" id="hs-bloco2" data-place="bloco2">
+      <span class="label">Bloco 2<span class="small">2 celas</span></span>
+    </button>
+
+      <button class="hotspot" id="hs-isolada" data-place="isolada">
+      <span class="label">Cela Isolada<span class="small">1 cela</span></span>
+    </button>
+    </div>
+  </div>
+
+  <header id="topBar">
+    <div class="title" id="dateTitle">Terça-feira, 17 de setembro</div>
+    <div class="subtitle" id="liturgicalSubtitle">Festa de São Roberto Belarmino</div>
+  </header>
+
+  <aside id="monasteryPanel">
+    <div class="panelHeading">
+      <img
+        class="panelThumb"
+        src="https://raw.githubusercontent.com/fr-pius/Alce/main/mosteiro_mapa.png"
+        alt="Mosteiro da Santa Cruz">
+      <div class="panelName">Mosteiro da Santa Cruz</div>
+    </div>
+
+    <div class="panelDescription">
+      Um refúgio de oração, trabalho e silêncio, protegido pelas montanhas e pela graça de Deus.
+    </div>
+
+    <div class="panelSectionTitle">
+      Estatísticas <span style="font-size:.72em;color:#aaa">(exemplo)</span>
+    </div>
+
+    <div class="monasteryStats">
+      <div class="monasteryStat">
+        <span class="statIcon" aria-hidden="true">
+          <svg class="panelSvgIcon" viewBox="0 0 24 24">
+            <path d="M3 10h18v9H3z"/><path d="M5 10V7h14v3"/><path d="M6 19v2M18 19v2"/>
+          </svg>
+        </span>
+        <span>Hóspedes presentes</span>
+        <span class="statValue">3 / 12</span>
+      </div>
+
+      <div class="monasteryStat">
+        <span class="statIcon" aria-hidden="true">
+          <svg class="panelSvgIcon" viewBox="0 0 24 24">
+            <rect x="3" y="5" width="18" height="16" rx="2"/>
+            <path d="M7 3v4M17 3v4M3 10h18"/>
+            <path d="M7 14h3M14 14h3M7 18h3"/>
+          </svg>
+        </span>
+        <span>Chegadas hoje</span>
+        <span class="statValue">1</span>
+      </div>
+
+      <div class="monasteryStat">
+        <span class="statIcon" aria-hidden="true">
+          <svg class="panelSvgIcon" viewBox="0 0 24 24">
+            <path d="M4 12h12"/><path d="m12 6 6 6-6 6"/>
+            <path d="M20 4v16"/>
+          </svg>
+        </span>
+        <span>Saídas hoje</span>
+        <span class="statValue">0</span>
+      </div>
+
+      <div class="monasteryStat">
+        <span class="statIcon" aria-hidden="true">
+          <svg class="panelSvgIcon" viewBox="0 0 24 24">
+            <path d="M4 17h11"/><path d="M6 17 8 7l4 4 3-7"/>
+            <path d="M16 8h4M18 6v4"/>
+          </svg>
+        </span>
+        <span>Limpeza das celas</span>
+        <span class="statValue">3 / 6</span>
+      </div>
+
+      <div class="monasteryStat">
+        <span class="statIcon" aria-hidden="true">
+          <svg class="panelSvgIcon" viewBox="0 0 24 24">
+            <path d="M12 3 22 20H2z"/><path d="M12 9v5"/>
+            <path d="M12 17h.01"/>
+          </svg>
+        </span>
+        <span>Eventos pendentes</span>
+        <span class="statValue">1</span>
+      </div>
+    </div>
+  </aside>
+
+  <div id="hint">Clique em um local do mosteiro para explorá-lo.</div>
+
+  <aside id="sidePanel">
+    <button id="panelClose" aria-label="Fechar">×</button>
+    <div id="panelIcon">✠</div>
+    <h2 id="panelTitle">Local</h2>
+    <div id="panelSubtitle"></div>
+    <div id="panelText"></div>
+    <div id="panelStats" class="statGrid"></div>
+    <button id="panelAction" class="panelAction">Explorar</button>
+  </aside>
+
+  <nav id="bottomNav">
+    <button class="navButton" id="mapBtn">
+      <span class="navIcon">🗺</span>Mapa
+    </button>
+    <button class="navButton" id="guestsBtn">
+      <span class="navIcon">♟</span>Hóspedes
+    </button>
+    <button class="navButton" id="cellsBtn">
+      <span class="navIcon">🛏</span>Celas
+    </button>
+    <button class="navButton" id="eventsBtn">
+      <span class="navIcon">✦</span>Eventos
+    </button>
+    <button class="navButton" id="settingsBtn">
+      <span class="navIcon">⚙</span>Configurações
+    </button>
+  </nav>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+/* O calendário exibido acompanha a data real do dispositivo.
+   O mapa não usa uma data fictícia. */
+const liturgicalFeasts = {
+  "09-17": "Festa de São Roberto Belarmino"
+};
+
+function updateRealDate() {
+  const now = new Date();
+
+  const dateText = new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long"
+  }).format(now);
+
+  const dateTitle = document.getElementById("dateTitle");
+  dateTitle.textContent = dateText.charAt(0).toUpperCase() + dateText.slice(1);
+
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const feast = liturgicalFeasts[`${month}-${day}`];
+
+  document.getElementById("liturgicalSubtitle").textContent =
+    feast || "Dia ferial";
+}
+
+function updateTimeOfDay() {
+  const hour = new Date().getHours();
+  const game = document.getElementById("game");
+
+  game.classList.remove("dawn", "day", "dusk", "night");
+
+  if (hour >= 6 && hour < 8) {
+    game.classList.add("dawn");
+  } else if (hour >= 8 && hour < 17) {
+    game.classList.add("day");
+  } else if (hour >= 17 && hour < 19) {
+    game.classList.add("dusk");
+  } else {
+    game.classList.add("night");
+  }
+}
+
+updateRealDate();
+updateTimeOfDay();
+setInterval(updateRealDate, 60000);
+setInterval(updateTimeOfDay, 60000);
+
+const places = {
+  hospedaria: {
+    icon: "🛏",
+    title: "Hospedaria",
+    subtitle: "O ponto mais elevado do mosteiro",
+    text: "A hospedaria recebe os hóspedes que chegam ao mosteiro. Neste protótipo, ela será a primeira área a receber dados reais do Nexus.",
+    stats: [["Celas", "6"], ["Hóspedes", "3"], ["Chegadas", "1"], ["Estado", "Protótipo"]],
+    action: "Entrar na hospedaria"
+  },
+  capela: {
+    icon: "⛪",
+    title: "Capela",
+    subtitle: "Entrada da clausura",
+    text: "A capela marca a passagem para o coração da clausura. Daqui o caminho desce pela encosta entre escadas, claustros e blocos de celas.",
+    stats: [["Local", "Entrada"], ["Acesso", "Clausura"], ["Estado", "Livre"], ["Eventos", "—"]],
+    action: "Entrar na capela"
+  },
+  professos: {
+    icon: "🛏",
+    title: "Bloco dos Professos",
+    subtitle: "15 celas em uma grande descida",
+    text: "O bloco dos Professos acompanha a inclinação da montanha. Cada cela ocupa um nível próprio, formando uma longa escadaria habitada.",
+    stats: [["Celas", "15"], ["Topografia", "Escalonada"], ["Ocupação", "—"], ["Estado", "Protótipo"]],
+    action: "Explorar as celas"
+  },
+  bloco4: {
+    icon: "🛏",
+    title: "Bloco 4",
+    subtitle: "Primeiro bloco da encosta oriental",
+    text: "Quatro celas situadas em um mesmo nível. Grandes escadas ligam este bloco aos demais setores da clausura.",
+    stats: [["Celas", "4"], ["Nível", "Alto"], ["Ocupação", "—"], ["Estado", "Protótipo"]],
+    action: "Explorar o bloco"
+  },
+  novicos: {
+    icon: "🛏",
+    title: "Noviços",
+    subtitle: "8 celas",
+    text: "O bloco dos noviços fica abaixo do Bloco 4. A posição será usada posteriormente para representar a progressão pela clausura.",
+    stats: [["Celas", "8"], ["Nível", "Médio"], ["Ocupação", "—"], ["Estado", "Protótipo"]],
+    action: "Explorar o noviciado"
+  },
+  bloco6: {
+    icon: "🛏",
+    title: "Bloco 6",
+    subtitle: "Seis celas junto à descida",
+    text: "Depois dos noviços, o caminho continua descendo até este conjunto de seis celas.",
+    stats: [["Celas", "6"], ["Nível", "Baixo"], ["Ocupação", "—"], ["Estado", "Protótipo"]],
+    action: "Explorar o bloco"
+  },
+  bloco2: {
+    icon: "🛏",
+    title: "Bloco 2",
+    subtitle: "Duas celas no centro da clausura",
+    text: "Um pequeno bloco situado próximo ao Bloco 6, mas sem alinhamento perfeitamente simétrico.",
+    stats: [["Celas", "2"], ["Nível", "Baixo"], ["Ocupação", "—"], ["Estado", "Protótipo"]],
+    action: "Explorar o bloco"
+  },
+  isolada: {
+    icon: "🏚",
+    title: "Cela Isolada",
+    subtitle: "O ponto mais baixo da clausura",
+    text: "A menor cela do mosteiro. Ela está afastada dos demais blocos, junto ao limite da floresta.",
+    stats: [["Celas", "1"], ["Posição", "Isolada"], ["Nível", "Mais baixo"], ["Estado", "Protótipo"]],
+    action: "Explorar a cela"
+  }
+};
+
+const panel = document.getElementById("sidePanel");
+const title = document.getElementById("panelTitle");
+const subtitle = document.getElementById("panelSubtitle");
+const text = document.getElementById("panelText");
+const stats = document.getElementById("panelStats");
+const icon = document.getElementById("panelIcon");
+const action = document.getElementById("panelAction");
+const hint = document.getElementById("hint");
+const toast = document.getElementById("toast");
+
+function openPlace(key) {
+  const p = places[key];
+  if (!p) return;
+
+  icon.textContent = p.icon;
+  title.textContent = p.title;
+  subtitle.textContent = p.subtitle;
+  text.textContent = p.text;
+  stats.innerHTML = p.stats.map(([label, value]) =>
+    `<div class="stat"><span>${label}</span><strong>${value}</strong></div>`
+  ).join("");
+  action.textContent = p.action;
+  action.dataset.place = key;
+
+  panel.classList.add("open");
+  hint.classList.add("hidden");
+}
+
+function closePanel() {
+  panel.classList.remove("open");
+}
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 1800);
+}
+
+document.querySelectorAll(".hotspot").forEach(button => {
+  button.addEventListener("click", () => openPlace(button.dataset.place));
+});
+
+document.getElementById("panelClose").addEventListener("click", closePanel);
+
+action.addEventListener("click", () => {
+  const key = action.dataset.place;
+
+  if (key === "hospedaria") {
+    showToast("Próxima etapa: ligar a Hospedaria ao Nexus.");
+  } else {
+    showToast("Esta área será desenvolvida na próxima etapa.");
+  }
+});
+
+document.getElementById("mapBtn").addEventListener("click", () => {
+  closePanel();
+  showToast("Mapa do Mosteiro");
+});
+
+document.getElementById("guestsBtn").addEventListener("click", () => {
+  showToast("Painel de hóspedes — em desenvolvimento");
+});
+
+document.getElementById("cellsBtn").addEventListener("click", () => {
+  showToast("Painel de celas — em desenvolvimento");
+});
+
+document.getElementById("eventsBtn").addEventListener("click", () => {
+  showToast("Painel de eventos — em desenvolvimento");
+});
+
+document.getElementById("settingsBtn").addEventListener("click", () => {
+  showToast("Configurações — em desenvolvimento");
+});
+
+/* Escape closes an open location panel. */
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") closePanel();
+});
+</script>
+</body>
+</html>

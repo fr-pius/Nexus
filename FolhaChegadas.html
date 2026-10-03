@@ -120,11 +120,27 @@
 
     .nome {
 
+      display: flex;
+
+      justify-content: space-between;
+
+      align-items: baseline;
+
       font-size: 16px;
 
       font-weight: bold;
 
       margin-bottom: 6px;
+
+    }
+
+    .quarto {
+
+      font-size: 12.5px;
+
+      font-weight: normal;
+
+      white-space: nowrap;
 
     }
 
@@ -270,10 +286,10 @@
     }
 
     .estado {
-  font-size: 12.5px;
-  margin-top: 4px;
-  margin-bottom: 4px;
-}
+      font-size: 12.5px;
+      margin-top: 4px;
+      margin-bottom: 4px;
+    }
 
   </style>
 
@@ -310,33 +326,34 @@
     <div class="hospede">
 
       <div class="nome">
-        <?= i + 1 ?>. <?= lista[i].nome ?>
+        <span><?= i + 1 ?>. <?= lista[i].nome ?></span>
+        <span class="quarto">Quarto: ...</span>
       </div>
 
 
       <div class="dados">
 
-  <div class="campo">
-    <span class="rotulo">Chegada:</span>
-    <?= formatarData(lista[i].chegada) ?>
-  </div>
+        <div class="campo">
+          <span class="rotulo">Chegada:</span>
+          <?= formatarData(lista[i].chegada) ?>
+        </div>
 
-  <div class="campo">
-    <span class="rotulo">Partida:</span>
-    <?= formatarData(lista[i].partida) ?>
-  </div>
+        <div class="campo">
+          <span class="rotulo">Partida:</span>
+          <?= formatarData(lista[i].partida) ?>
+        </div>
 
-</div>
+      </div>
 
-<div class="estado">
-  <span class="rotulo">Estado:</span>
-  <?= lista[i].estado ?>
-</div>
+      <div class="estado">
+        <span class="rotulo">Estado:</span>
+        <?= lista[i].estado ?>
+      </div>
 
-<div class="motivo">
-  <span class="rotulo">Motivo:</span>
-  <?= lista[i].motivo ?>
-</div>
+      <div class="motivo">
+        <span class="rotulo">Motivo:</span>
+        <?= lista[i].motivo ?>
+      </div>
 
 
       <? if (i < lista.length - 1) { ?>
@@ -366,9 +383,9 @@
     Imprimir
   </button>
 
- <button onclick="window.close()">
-  Fechar
-</button>
+  <button onclick="window.close()">
+    Fechar
+  </button>
 
 </div>
 

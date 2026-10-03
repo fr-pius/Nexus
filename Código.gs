@@ -393,16 +393,10 @@ function obterListaChegadas(
       campo("Motivo Principal da Hospedagem")
     ];
 
-  const indiceNomeReligiosoSolicitacao =
-    colSolicitacoes[
-     campo("Nome religioso")
-    ];
-
-   const indiceNomeCivilSolicitacao =
-    colSolicitacoes[
-     campo("Nome civil completo")
-    ];
-
+ const indiceNomeSolicitacao =
+  colSolicitacoes[
+    campo("Nome")
+  ];
 
   const indiceNomeReligiosoCadastro =
     colCadastro[
@@ -844,25 +838,14 @@ if (cadastro) {
 
 } else {
 
-  const nomeReligioso =
-    indiceNomeReligiosoSolicitacao !== undefined
-      ? linhaSolicitacao[
-          indiceNomeReligiosoSolicitacao
-        ]
-      : "";
-
-
-  const nomeCivil =
-    indiceNomeCivilSolicitacao !== undefined
-      ? linhaSolicitacao[
-          indiceNomeCivilSolicitacao
-        ]
-      : "";
-
+} else {
 
   nome =
-    nomeReligioso ||
-    nomeCivil;
+    indiceNomeSolicitacao !== undefined
+      ? linhaSolicitacao[
+          indiceNomeSolicitacao
+        ]
+      : "";
 
 }
 

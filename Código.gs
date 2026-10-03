@@ -393,6 +393,16 @@ function obterListaChegadas(
       campo("Motivo Principal da Hospedagem")
     ];
 
+  const indiceNomeReligiosoSolicitacao =
+    colSolicitacoes[
+     campo("Nome religioso")
+    ];
+
+   const indiceNomeCivilSolicitacao =
+    colSolicitacoes[
+     campo("Nome civil completo")
+    ];
+
 
   const indiceNomeReligiosoCadastro =
     colCadastro[
@@ -629,13 +639,11 @@ function obterListaChegadas(
   // ==========================================================
 
   if (
-    indiceStatusSolicitacao !== undefined &&
-    indiceCPFSolicitacao !== undefined &&
-    indiceChegadaSolicitacao !== undefined &&
-    indicePartidaSolicitacao !== undefined &&
-    indiceMotivoSolicitacao !== undefined &&
-    indiceCPFCadastro !== undefined
-  ) {
+  indiceStatusSolicitacao !== undefined &&
+  indiceChegadaSolicitacao !== undefined &&
+  indicePartidaSolicitacao !== undefined &&
+  indiceMotivoSolicitacao !== undefined
+) {
 
     for (
       let i = 1;
@@ -699,11 +707,6 @@ function obterListaChegadas(
         ).trim();
 
 
-      if (!cpf) {
-        continue;
-      }
-
-
 
       // ======================================================
       // PROCURA O CPF NO CADASTRO
@@ -744,8 +747,9 @@ function obterListaChegadas(
 
 
         if (
+          cpf &&
           cpfCadastro === cpf
-        ) {
+          ) {
 
           cadastro =
             registroCadastro;
@@ -754,16 +758,6 @@ function obterListaChegadas(
 
         }
 
-      }
-
-
-
-      // ======================================================
-      // CPF NÃO ENCONTRADO
-      // ======================================================
-
-      if (!cadastro) {
-        continue;
       }
 
 
@@ -803,34 +797,79 @@ function obterListaChegadas(
 
 
 
-      // ======================================================
-      // NOME E ESTADO VÊM DO CADASTRO ATUALIZADO
-      // ======================================================
+     // ======================================================
+// NOME E ESTADO
+//
+// Quando o CPF encontra cadastro, usam-se os dados do
+// cadastro atualizado. Caso contrário, usa-se o nome da
+// própria solicitação atualizada.
+// ======================================================
 
-      const linhaCadastro =
-        cadastro.linha;
+let nome = "";
 
-
-      const nomeReligioso =
-        indiceNomeReligiosoCadastro !== undefined
-          ? linhaCadastro[
-              indiceNomeReligiosoCadastro
-            ]
-          : "";
+let estado = "";
 
 
-      const nomeCivil =
-        indiceNomeCivilCadastro !== undefined
-          ? linhaCadastro[
-              indiceNomeCivilCadastro
-            ]
-          : "";
+if (cadastro) {
+
+  const linhaCadastro =
+    cadastro.linha;
 
 
-      const estado =
-        linhaCadastro[
-          indiceEstadoCadastro
-        ] ?? "";
+  const nomeReligioso =
+    indiceNomeReligiosoCadastro !== undefined
+      ? linhaCadastro[
+          indiceNomeReligiosoCadastro
+        ]
+      : "";
+
+
+  const nomeCivil =
+    indiceNomeCivilCadastro !== undefined
+      ? linhaCadastro[
+          indiceNomeCivilCadastro
+        ]
+      : "";
+
+
+  nome =
+    nomeReligioso ||
+    nomeCivil;
+
+
+  estado =
+    linhaCadastro[
+      indiceEstadoCadastro
+    ] ?? "";
+
+} else {
+
+  const nomeReligioso =
+    indiceNomeReligiosoSolicitacao !== undefined
+      ? linhaSolicitacao[
+          indiceNomeReligiosoSolicitacao
+        ]
+      : "";
+
+
+  const nomeCivil =
+    indiceNomeCivilSolicitacao !== undefined
+      ? linhaSolicitacao[
+          indiceNomeCivilSolicitacao
+        ]
+      : "";
+
+
+  nome =
+    nomeReligioso ||
+    nomeCivil;
+
+}
+
+
+if (!String(nome ?? "").trim()) {
+  continue;
+}
 
 
 
@@ -840,9 +879,8 @@ function obterListaChegadas(
 
       lista.push({
 
-        nome:
-          nomeReligioso ||
-          nomeCivil,
+          nome:
+           nome,
 
         chegada:
           chegada,

@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <base target="_top">
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: #555;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    body {
+      padding: 30px;
+    }
+
+
+    /* =========================================================
+       FOLHA A4
+       ========================================================= */
+
+    .folha {
+
+      width: 210mm;
+      min-height: 297mm;
+
+      margin: 0 auto;
+
+      padding: 17mm 20mm 20mm 20mm;
+
+      background: #fff;
+
+      color: #222;
+
+      box-shadow:
+        0 4px 18px rgba(0,0,0,0.35);
+
+      position: relative;
+
+    }
+
+
+    /* =========================================================
+       CABEÇALHO
+       ========================================================= */
+
+    .cabecalho {
+
+      text-align: center;
+
+      margin-bottom: 12mm;
+
+    }
+
+    .ornamento {
+
+      font-size: 21px;
+
+      margin-bottom: 4px;
+
+    }
+
+    h1 {
+
+      margin: 0;
+
+      font-size: 25px;
+
+      letter-spacing: 2px;
+
+      font-weight: normal;
+
+    }
+
+    .mes {
+
+      margin-top: 6px;
+
+      font-size: 15px;
+
+      font-variant: small-caps;
+
+      letter-spacing: 3px;
+
+    }
+
+    .linha {
+
+      width: 72%;
+
+      margin: 10px auto 0 auto;
+
+      border-top: 1px solid #444;
+
+    }
+
+
+    /* =========================================================
+       REGISTRO DO HÓSPEDE
+       ========================================================= */
+
+    .hospede {
+
+      margin-bottom: 7mm;
+
+      padding-bottom: 5mm;
+
+      page-break-inside: avoid;
+
+    }
+
+    .nome {
+
+      font-size: 16px;
+
+      font-weight: bold;
+
+      margin-bottom: 6px;
+
+    }
+
+    .dados {
+
+      display: grid;
+
+      grid-template-columns: 1fr 1fr;
+
+      column-gap: 12mm;
+
+      font-size: 12.5px;
+
+      margin-bottom: 5px;
+
+    }
+
+    .campo {
+
+      margin-bottom: 3px;
+
+      white-space: nowrap;
+
+    }
+
+    .rotulo {
+
+      font-weight: bold;
+
+    }
+
+    .motivo {
+
+      font-size: 12.5px;
+
+      line-height: 1.4;
+
+      margin-top: 4px;
+
+    }
+
+    .separador {
+
+      border-bottom: 1px solid #aaa;
+
+      margin-top: 5mm;
+
+    }
+
+
+    /* =========================================================
+       RODAPÉ
+       ========================================================= */
+
+    .rodape {
+
+      position: absolute;
+
+      bottom: 10mm;
+
+      left: 20mm;
+      right: 20mm;
+
+      text-align: center;
+
+      font-size: 10px;
+
+      font-style: italic;
+
+    }
+
+
+    /* =========================================================
+       BOTÕES
+       ========================================================= */
+
+    .controles {
+
+      text-align: center;
+
+      margin-top: 20px;
+
+    }
+
+    button {
+
+      padding: 10px 22px;
+
+      margin: 5px;
+
+      font-size: 14px;
+
+      cursor: pointer;
+
+    }
+
+
+    /* =========================================================
+       IMPRESSÃO
+       ========================================================= */
+
+    @page {
+
+      size: A4 portrait;
+
+      margin: 0;
+
+    }
+
+    @media print {
+
+      html,
+      body {
+
+        background: white;
+
+      }
+
+      body {
+
+        padding: 0;
+
+      }
+
+      .folha {
+
+        width: 210mm;
+
+        min-height: 297mm;
+
+        margin: 0;
+
+        box-shadow: none;
+
+      }
+
+      .controles {
+
+        display: none;
+
+      }
+
+    }
+
+    .estado {
+  font-size: 12.5px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+  </style>
+
+</head>
+
+
+<body>
+
+
+<div class="folha">
+
+
+  <div class="cabecalho">
+
+    <div class="ornamento">
+      ❦
+    </div>
+
+    <h1>
+      LISTA DE CHEGADAS
+    </h1>
+
+    <div class="mes">
+      <?= nomeMes ?>
+    </div>
+
+    <div class="linha"></div>
+
+  </div>
+
+
+  <? for (let i = 0; i < lista.length; i++) { ?>
+
+    <div class="hospede">
+
+      <div class="nome">
+        <?= i + 1 ?>. <?= lista[i].nome ?>
+      </div>
+
+
+      <div class="dados">
+
+  <div class="campo">
+    <span class="rotulo">Chegada:</span>
+    <?= formatarData(lista[i].chegada) ?>
+  </div>
+
+  <div class="campo">
+    <span class="rotulo">Partida:</span>
+    <?= formatarData(lista[i].partida) ?>
+  </div>
+
+</div>
+
+<div class="estado">
+  <span class="rotulo">Estado:</span>
+  <?= lista[i].estado ?>
+</div>
+
+<div class="motivo">
+  <span class="rotulo">Motivo:</span>
+  <?= lista[i].motivo ?>
+</div>
+
+
+      <? if (i < lista.length - 1) { ?>
+
+        <div class="separador"></div>
+
+      <? } ?>
+
+    </div>
+
+  <? } ?>
+
+
+  <div class="rodape">
+
+    Mosteiro da Santa Cruz
+
+  </div>
+
+
+</div>
+
+
+<div class="controles">
+
+  <button onclick="window.print()">
+    Imprimir
+  </button>
+
+ <button onclick="window.close()">
+  Fechar
+</button>
+
+</div>
+
+
+</body>
+
+</html>

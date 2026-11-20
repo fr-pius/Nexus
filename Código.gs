@@ -1,3 +1,7 @@
+
+
+
+
  // ============================================================
 // ARQUIVO: Sistema.gs
 // ============================================================
@@ -838,8 +842,6 @@ if (cadastro) {
 
 } else {
 
-} else {
-
   nome =
     indiceNomeSolicitacao !== undefined
       ? linhaSolicitacao[
@@ -1022,6 +1024,14 @@ function criarRegistroAtualizado(
     const indiceColuna =
       numeroColuna - 1;
 
+
+    // O Status é uma coluna administrativa especial.
+    // Ele nunca é alterado por comandos virtuais: sua alteração
+    // é feita diretamente pelo menu suspenso da planilha/Nexus.
+    if (indiceColuna === indiceStatus) {
+      Logger.log("COMANDO IGNORADO: Status só pode ser alterado diretamente.");
+      continue;
+    }
 
 
     // ========================================================
@@ -2489,3 +2499,177 @@ function mostrarTelaChegadas() {
 // ============================================================
 
 // Arquivo atualmente vazio.
+
+
+// ============================================================
+// NEXUS — ADMINISTRAÇÃO DE SOLICITAÇÕES
+// ============================================================
+// A fila é alimentada pela aba "Solicitação de Hospedagem".
+// As respostas do formulário nunca são regravadas. Os comandos
+// virtuais são aplicados apenas à cópia lida pelo Nexus.
+// O Status é a única célula que esta operação modifica.
+// ============================================================
+
+const NEXUS_STATUS_VALIDOS = [
+  "Confirmado",
+  "Cancelado",
+  "Em andamento",
+  "Concluído",
+  "Neutro"
+];
+
+function nexusNormalizarValorAssinatura(valor) {
+  if (valor instanceof Date) {
+    return { tipo: "data", valor: valor.getTime() };
+  }
+  if (valor === null || valor === undefined) {
+    return { tipo: "nulo", valor: "" };
+  }
+  return { tipo: typeof valor, valor: valor };
+}
+
+function nexusAssinaturaLinha(linha) {
+  const conteudo = JSON.stringify(
+    linha.map(nexusNormalizarValorAssinatura)
+  );
+  const digest = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    conteudo,
+    Utilities.Charset.UTF_8
+  );
+  return Utilities.base64EncodeWebSafe(digest);
+}
+
+function nexusValorParaInterface(valor) {
+  if (valor instanceof Date && !isNaN(valor.getTime())) {
+    return Utilities.formatDate(
+      valor,
+      Session.getScriptTimeZone(),
+      "dd/MM/yyyy HH:mm"
+    );
+  }
+  if (valor === null || valor === undefined) return "";
+  return String(valor);
+}
+
+/**
+ * Devolve solicitações ainda abertas para avaliação.
+ * Exibe todos os campos do formulário (antes da coluna Status),
+ * mas nunca exibe as colunas que contêm comandos de modificação.
+ */
+function obterSolicitacoesPendentesNexus() {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet();
+  const aba = planilha.getSheetByName("Solicitação de Hospedagem");
+  if (!aba) {
+    throw new Error('A aba "Solicitação de Hospedagem" não foi encontrada.');
+  }
+
+  const dados = aba.getDataRange().getValues();
+  if (!dados || dados.length < 2) return [];
+
+  const cabecalho = dados[0];
+  const colunas = localizarColunas(cabecalho);
+  const indiceStatus = colunas[campo("Status")];
+  if (indiceStatus === undefined) {
+    throw new Error('A coluna "Status" não foi encontrada na aba de solicitações.');
+  }
+
+  const pendentes = [];
+  for (let i = 1; i < dados.length; i++) {
+    const linhaOriginal = dados[i];
+    if (linhaOriginal.every(v => v === "" || v === null)) continue;
+
+    const registro = criarRegistroAtualizado(linhaOriginal, indiceStatus);
+    if (!registro) continue;
+    const linhaAtualizada = registro.linha;
+    const status = String(linhaOriginal[indiceStatus] || "").trim();
+    const statusNormalizado = status.toLowerCase();
+
+    // Confirmado, Cancelado e Concluído não são pendências.
+    // Em branco, Neutro, Em andamento e valores inesperados
+    // permanecem visíveis para que nenhuma solicitação se perca.
+    if (["confirmado", "cancelado", "concluído", "concluido"].includes(statusNormalizado)) {
+      continue;
+    }
+
+    const campos = [];
+    for (let c = 0; c < indiceStatus; c++) {
+      const titulo = String(cabecalho[c] || "").trim();
+      if (!titulo) continue;
+      campos.push({
+        nome: titulo,
+        valor: nexusValorParaInterface(linhaAtualizada[c])
+      });
+    }
+
+    pendentes.push({
+      assinatura: nexusAssinaturaLinha(linhaOriginal),
+      status: status,
+      campos: campos
+    });
+  }
+
+  return pendentes;
+}
+
+/**
+ * Atualiza exclusivamente a célula Status da solicitação indicada.
+ * A assinatura da linha é conferida novamente sob bloqueio; assim,
+ * se a linha foi alterada enquanto a tela estava aberta, a gravação
+ * é recusada em vez de atingir outro hóspede.
+ */
+function atualizarStatusSolicitacaoNexus(assinatura, novoStatus) {
+  const status = String(novoStatus || "").trim();
+  if (!NEXUS_STATUS_VALIDOS.includes(status)) {
+    throw new Error("Status inválido. Escolha uma das opções disponíveis.");
+  }
+  if (!assinatura) {
+    throw new Error("Não foi possível identificar a solicitação. Atualize a lista.");
+  }
+
+  const bloqueio = LockService.getScriptLock();
+  bloqueio.waitLock(10000);
+  try {
+    const planilha = SpreadsheetApp.getActiveSpreadsheet();
+    const aba = planilha.getSheetByName("Solicitação de Hospedagem");
+    if (!aba) throw new Error('A aba "Solicitação de Hospedagem" não foi encontrada.');
+
+    const dados = aba.getDataRange().getValues();
+    if (dados.length < 2) throw new Error("Não há solicitações para atualizar.");
+
+    const colunas = localizarColunas(dados[0]);
+    const indiceStatus = colunas[campo("Status")];
+    if (indiceStatus === undefined) throw new Error('A coluna "Status" não foi encontrada.');
+
+    const correspondencias = [];
+    for (let i = 1; i < dados.length; i++) {
+      if (nexusAssinaturaLinha(dados[i]) === assinatura) {
+        correspondencias.push(i + 1); // índice de linha na planilha
+      }
+    }
+
+    if (correspondencias.length !== 1) {
+      throw new Error(
+        correspondencias.length === 0
+          ? "A solicitação foi modificada ou movida desde a consulta. Atualize a lista antes de tentar novamente."
+          : "Foram encontradas solicitações idênticas. Por segurança, o Nexus não alterou nenhuma delas."
+      );
+    }
+
+    const numeroLinha = correspondencias[0];
+    // ÚNICA escrita desta operação: uma célula na coluna Status.
+    aba.getRange(numeroLinha, indiceStatus + 1).setValue(status);
+    SpreadsheetApp.flush();
+
+    return {
+      sucesso: true,
+      status: status
+    };
+  } finally {
+    bloqueio.releaseLock();
+  }
+}
+
+
+
+

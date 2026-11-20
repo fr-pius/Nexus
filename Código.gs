@@ -2528,10 +2528,11 @@ function nexusNormalizarValorAssinatura(valor) {
   return { tipo: typeof valor, valor: valor };
 }
 
-function nexusAssinaturaLinha(linha) {
-  const conteudo = JSON.stringify(
-    linha.map(nexusNormalizarValorAssinatura)
-  );
+function nexusAssinaturaLinha(linha, nomeAba) {
+  const conteudo = JSON.stringify({
+    aba: String(nomeAba || ""),
+    linha: linha.map(nexusNormalizarValorAssinatura)
+  });
   const digest = Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
     conteudo,
@@ -2559,55 +2560,68 @@ function nexusValorParaInterface(valor) {
  */
 function obterSolicitacoesPendentesNexus() {
   const planilha = SpreadsheetApp.getActiveSpreadsheet();
-  const aba = planilha.getSheetByName("Solicitação de Hospedagem");
-  if (!aba) {
-    throw new Error('A aba "Solicitação de Hospedagem" não foi encontrada.');
-  }
-
-  const dados = aba.getDataRange().getValues();
-  if (!dados || dados.length < 2) return [];
-
-  const cabecalho = dados[0];
-  const colunas = localizarColunas(cabecalho);
-  const indiceStatus = colunas[campo("Status")];
-  if (indiceStatus === undefined) {
-    throw new Error('A coluna "Status" não foi encontrada na aba de solicitações.');
-  }
-
+  const nomesAbas = [
+    "Cadastro de Hóspedes",
+    "Solicitação de Hospedagem"
+  ];
   const pendentes = [];
-  for (let i = 1; i < dados.length; i++) {
-    const linhaOriginal = dados[i];
-    if (linhaOriginal.every(v => v === "" || v === null)) continue;
 
-    const registro = criarRegistroAtualizado(linhaOriginal, indiceStatus);
-    if (!registro) continue;
-    const linhaAtualizada = registro.linha;
-    const status = String(linhaOriginal[indiceStatus] || "").trim();
-    const statusNormalizado = status.toLowerCase();
-
-    // Confirmado, Cancelado e Concluído não são pendências.
-    // Em branco, Neutro, Em andamento e valores inesperados
-    // permanecem visíveis para que nenhuma solicitação se perca.
-    if (["confirmado", "cancelado", "concluído", "concluido"].includes(statusNormalizado)) {
-      continue;
+  nomesAbas.forEach(function(nomeAba) {
+    const aba = planilha.getSheetByName(nomeAba);
+    if (!aba) {
+      throw new Error('A aba "' + nomeAba + '" não foi encontrada.');
     }
 
-    const campos = [];
-    for (let c = 0; c < indiceStatus; c++) {
-      const titulo = String(cabecalho[c] || "").trim();
-      if (!titulo) continue;
-      campos.push({
-        nome: titulo,
-        valor: nexusValorParaInterface(linhaAtualizada[c])
+    const dados = aba.getDataRange().getValues();
+    if (!dados || dados.length < 2) return;
+
+    const cabecalho = dados[0];
+    const colunas = localizarColunas(cabecalho);
+    const indiceStatus = colunas[campo("Status")];
+    if (indiceStatus === undefined) {
+      throw new Error('A coluna "Status" não foi encontrada na aba "' + nomeAba + '".');
+    }
+
+    for (let i = 1; i < dados.length; i++) {
+      const linhaOriginal = dados[i];
+
+      // A primeira coluna contém o carimbo de data e hora.
+      // Sem esse valor, a linha não representa uma resposta de formulário.
+      const carimbo = linhaOriginal[0];
+      if (carimbo === "" || carimbo === null || carimbo === undefined ||
+          String(carimbo).trim() === "") {
+        continue;
+      }
+
+      // Somente registros cujo Status esteja realmente vazio aguardam avaliação.
+      const statusOriginal = linhaOriginal[indiceStatus];
+      if (statusOriginal !== "" && statusOriginal !== null &&
+          statusOriginal !== undefined && String(statusOriginal).trim() !== "") {
+        continue;
+      }
+
+      // Aplicam-se os comandos virtuais apenas à cópia lida pelo Nexus.
+      const registro = criarRegistroAtualizado(linhaOriginal, indiceStatus);
+      if (!registro) continue;
+
+      const campos = [];
+      for (let c = 0; c < indiceStatus; c++) {
+        const titulo = String(cabecalho[c] || "").trim();
+        if (!titulo) continue;
+        campos.push({
+          nome: titulo,
+          valor: nexusValorParaInterface(registro.linha[c])
+        });
+      }
+
+      pendentes.push({
+        assinatura: nexusAssinaturaLinha(linhaOriginal, nomeAba),
+        origem: nomeAba,
+        status: "",
+        campos: campos
       });
     }
-
-    pendentes.push({
-      assinatura: nexusAssinaturaLinha(linhaOriginal),
-      status: status,
-      campos: campos
-    });
-  }
+  });
 
   return pendentes;
 }
@@ -2624,46 +2638,76 @@ function atualizarStatusSolicitacaoNexus(assinatura, novoStatus) {
     throw new Error("Status inválido. Escolha uma das opções disponíveis.");
   }
   if (!assinatura) {
-    throw new Error("Não foi possível identificar a solicitação. Atualize a lista.");
+    throw new Error("Não foi possível identificar o registro. Atualize a lista.");
   }
 
   const bloqueio = LockService.getScriptLock();
   bloqueio.waitLock(10000);
   try {
     const planilha = SpreadsheetApp.getActiveSpreadsheet();
-    const aba = planilha.getSheetByName("Solicitação de Hospedagem");
-    if (!aba) throw new Error('A aba "Solicitação de Hospedagem" não foi encontrada.');
-
-    const dados = aba.getDataRange().getValues();
-    if (dados.length < 2) throw new Error("Não há solicitações para atualizar.");
-
-    const colunas = localizarColunas(dados[0]);
-    const indiceStatus = colunas[campo("Status")];
-    if (indiceStatus === undefined) throw new Error('A coluna "Status" não foi encontrada.');
-
+    const nomesAbas = [
+      "Cadastro de Hóspedes",
+      "Solicitação de Hospedagem"
+    ];
     const correspondencias = [];
-    for (let i = 1; i < dados.length; i++) {
-      if (nexusAssinaturaLinha(dados[i]) === assinatura) {
-        correspondencias.push(i + 1); // índice de linha na planilha
+
+    nomesAbas.forEach(function(nomeAba) {
+      const aba = planilha.getSheetByName(nomeAba);
+      if (!aba) {
+        throw new Error('A aba "' + nomeAba + '" não foi encontrada.');
       }
-    }
+
+      const dados = aba.getDataRange().getValues();
+      if (!dados || dados.length < 2) return;
+
+      const colunas = localizarColunas(dados[0]);
+      const indiceStatus = colunas[campo("Status")];
+      if (indiceStatus === undefined) {
+        throw new Error('A coluna "Status" não foi encontrada na aba "' + nomeAba + '".');
+      }
+
+      for (let i = 1; i < dados.length; i++) {
+        const linha = dados[i];
+        const carimbo = linha[0];
+        if (carimbo === "" || carimbo === null || carimbo === undefined ||
+            String(carimbo).trim() === "") {
+          continue;
+        }
+
+        if (nexusAssinaturaLinha(linha, nomeAba) === assinatura) {
+          correspondencias.push({
+            aba: aba,
+            nomeAba: nomeAba,
+            numeroLinha: i + 1,
+            indiceStatus: indiceStatus,
+            statusAtual: linha[indiceStatus]
+          });
+        }
+      }
+    });
 
     if (correspondencias.length !== 1) {
       throw new Error(
         correspondencias.length === 0
-          ? "A solicitação foi modificada ou movida desde a consulta. Atualize a lista antes de tentar novamente."
-          : "Foram encontradas solicitações idênticas. Por segurança, o Nexus não alterou nenhuma delas."
+          ? "O registro foi modificado ou movido desde a consulta. Atualize a lista antes de tentar novamente."
+          : "Foram encontrados registros idênticos. Por segurança, o Nexus não alterou nenhum deles."
       );
     }
 
-    const numeroLinha = correspondencias[0];
-    // ÚNICA escrita desta operação: uma célula na coluna Status.
-    aba.getRange(numeroLinha, indiceStatus + 1).setValue(status);
+    const alvo = correspondencias[0];
+    if (alvo.statusAtual !== "" && alvo.statusAtual !== null &&
+        alvo.statusAtual !== undefined && String(alvo.statusAtual).trim() !== "") {
+      throw new Error("Este registro já recebeu um Status. Atualize a lista.");
+    }
+
+    // ÚNICA escrita desta operação: uma célula na coluna Status da aba de origem.
+    alvo.aba.getRange(alvo.numeroLinha, alvo.indiceStatus + 1).setValue(status);
     SpreadsheetApp.flush();
 
     return {
       sucesso: true,
-      status: status
+      status: status,
+      origem: alvo.nomeAba
     };
   } finally {
     bloqueio.releaseLock();

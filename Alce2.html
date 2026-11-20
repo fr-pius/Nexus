@@ -314,6 +314,109 @@
 
 
     /* ============================================================
+       ADMINISTRAÇÃO DE SOLICITAÇÕES
+       ============================================================ */
+
+    .solicitacoes {
+      margin-top: 30px;
+      padding-top: 25px;
+      border-top: 1px solid #d9cfbc;
+    }
+
+    .solicitacoes-cabecalho {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .solicitacoes-titulo {
+      font-size: 23px;
+      color: #1d3048;
+    }
+
+    .solicitacoes-descricao {
+      color: #6d675e;
+      font-size: 15px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .solicitacao-card {
+      border: 1px solid #e0d9cc;
+      border-radius: 4px;
+      padding: 18px;
+      margin: 14px 0;
+      background: #fff;
+    }
+
+    .solicitacao-campos {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px 18px;
+    }
+
+    .solicitacao-campo {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      line-height: 1.5;
+      color: #625f59;
+      font-size: 14px;
+    }
+
+    .solicitacao-campo strong {
+      display: block;
+      color: #414b58;
+      margin-bottom: 2px;
+    }
+
+    .solicitacao-acoes {
+      display: flex;
+      align-items: end;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+      padding-top: 15px;
+      border-top: 1px solid #eee8dd;
+    }
+
+    .solicitacao-status {
+      flex: 1;
+      min-width: 190px;
+    }
+
+    .solicitacao-status label {
+      display: block;
+      margin-bottom: 6px;
+      color: #4f5968;
+      font-size: 14px;
+    }
+
+    .solicitacao-salvar {
+      width: 170px;
+    }
+
+    .solicitacao-mensagem {
+      width: 100%;
+      font-size: 13px;
+      color: #626b78;
+    }
+
+    .solicitacao-vazia {
+      padding: 16px 0;
+      color: #6d675e;
+      font-style: italic;
+    }
+
+    .botao-secundario {
+      width: auto;
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+
+    /* ============================================================
        RESULTADO
        ============================================================ */
 
@@ -713,31 +816,25 @@
 
       <div id="mensagem"></div>
 
+      <section class="solicitacoes" aria-labelledby="tituloSolicitacoes">
+        <div class="solicitacoes-cabecalho">
+          <div class="solicitacoes-titulo" id="tituloSolicitacoes">Solicitações para avaliação</div>
+          <button class="botao-secundario" type="button" onclick="carregarSolicitacoesPendentes()">
+            Atualizar solicitações
+          </button>
+        </div>
+        <div class="solicitacoes-descricao">
+          Novas solicitações e registros ainda em avaliação. As respostas originais dos formulários são preservadas; somente o Status será atualizado.
+        </div>
+        <div id="mensagemSolicitacoes" aria-live="polite"></div>
+        <div id="listaSolicitacoes"></div>
+      </section>
+
       <div id="resultado"></div>
 
-       <div
-    class="controles-impressao"
-    id="controlesImpressao"
-    style="display: none;">
-
-    <button onclick="imprimirChegadas()">
-      Imprimir
-    </button>
-
-  </div>
-
-   <div id="resultado"></div>
-
-<div
-  class="controles-impressao"
-  id="controlesImpressao"
-  style="display: none;">
-
-  <button onclick="imprimirChegadas()">
-    Imprimir
-  </button>
-
-</div>
+      <div class="controles-impressao" id="controlesImpressao" style="display: none;">
+        <button onclick="imprimirChegadas()">Imprimir</button>
+      </div>
 
 
     <!-- ==========================================================
@@ -1010,6 +1107,133 @@
 
 
     // ============================================================
+    // ADMINISTRAÇÃO DE SOLICITAÇÕES
+    // ============================================================
+
+    const statusDisponiveis = [
+      "Confirmado",
+      "Cancelado",
+      "Em andamento",
+      "Concluído",
+      "Neutro"
+    ];
+
+    function carregarSolicitacoesPendentes() {
+      const lista = document.getElementById("listaSolicitacoes");
+      const mensagem = document.getElementById("mensagemSolicitacoes");
+      lista.innerHTML = "";
+      mensagem.className = "";
+      mensagem.textContent = "Consultando novas solicitações...";
+
+      google.script.run
+        .withSuccessHandler(function(solicitacoes) {
+          mensagem.textContent = solicitacoes.length
+            ? solicitacoes.length + (solicitacoes.length === 1
+                ? " solicitação aguardando avaliação."
+                : " solicitações aguardando avaliação.")
+            : "Não há solicitações pendentes de avaliação.";
+
+          if (!solicitacoes.length) {
+            const vazio = document.createElement("div");
+            vazio.className = "solicitacao-vazia";
+            vazio.textContent = "Todas as solicitações estão com status final ou não há novos registros.";
+            lista.appendChild(vazio);
+            return;
+          }
+
+          solicitacoes.forEach(function(solicitacao) {
+            lista.appendChild(criarCartaoSolicitacao(solicitacao));
+          });
+        })
+        .withFailureHandler(function(erro) {
+          mensagem.className = "erro";
+          mensagem.textContent = "Não foi possível consultar as solicitações: " + erro.message;
+        })
+        .obterSolicitacoesPendentesNexus();
+    }
+
+    function criarCartaoSolicitacao(solicitacao) {
+      const cartao = document.createElement("article");
+      cartao.className = "solicitacao-card";
+
+      const campos = document.createElement("div");
+      campos.className = "solicitacao-campos";
+
+      solicitacao.campos.forEach(function(campo) {
+        const item = document.createElement("div");
+        item.className = "solicitacao-campo";
+        const titulo = document.createElement("strong");
+        titulo.textContent = campo.nome;
+        const valor = document.createElement("span");
+        valor.textContent = campo.valor || "Não informado";
+        item.appendChild(titulo);
+        item.appendChild(valor);
+        campos.appendChild(item);
+      });
+
+      const acoes = document.createElement("div");
+      acoes.className = "solicitacao-acoes";
+
+      const grupoStatus = document.createElement("div");
+      grupoStatus.className = "solicitacao-status";
+      const rotulo = document.createElement("label");
+      rotulo.textContent = "Status";
+      const seletor = document.createElement("select");
+      statusDisponiveis.forEach(function(status) {
+        const opcao = document.createElement("option");
+        opcao.value = status;
+        opcao.textContent = status;
+        seletor.appendChild(opcao);
+      });
+      if (statusDisponiveis.includes(solicitacao.status)) {
+        seletor.value = solicitacao.status;
+      } else {
+        seletor.value = "Neutro";
+      }
+      rotulo.appendChild(seletor);
+      grupoStatus.appendChild(rotulo);
+
+      const salvar = document.createElement("button");
+      salvar.type = "button";
+      salvar.className = "solicitacao-salvar";
+      salvar.textContent = "Salvar status";
+
+      const retorno = document.createElement("div");
+      retorno.className = "solicitacao-mensagem";
+      retorno.setAttribute("aria-live", "polite");
+
+      salvar.addEventListener("click", function() {
+        const novoStatus = seletor.value;
+        salvar.disabled = true;
+        retorno.className = "solicitacao-mensagem";
+        retorno.textContent = "Atualizando status...";
+
+        google.script.run
+          .withSuccessHandler(function(resposta) {
+            retorno.textContent = "Status atualizado para “" + resposta.status + "”.";
+            retorno.className = "solicitacao-mensagem";
+            salvar.disabled = true;
+            // Dá tempo para o responsável ler a confirmação e, em seguida,
+            // atualiza a fila a partir da planilha, que continua sendo a fonte oficial.
+            setTimeout(carregarSolicitacoesPendentes, 1200);
+          })
+          .withFailureHandler(function(erro) {
+            retorno.className = "solicitacao-mensagem erro";
+            retorno.textContent = "Não foi possível atualizar: " + erro.message;
+            salvar.disabled = false;
+          })
+          .atualizarStatusSolicitacaoNexus(solicitacao.assinatura, novoStatus);
+      });
+
+      acoes.appendChild(grupoStatus);
+      acoes.appendChild(salvar);
+      acoes.appendChild(retorno);
+      cartao.appendChild(campos);
+      cartao.appendChild(acoes);
+      return cartao;
+    }
+
+    // ============================================================
     // DATAS
     // ============================================================
 
@@ -1186,6 +1410,9 @@ function enviarFeedback() {
 
     .registrarFeedback(comentario);
 }
+
+    // Carrega a fila ao abrir o Nexus.
+    carregarSolicitacoesPendentes();
 
   </script>
 

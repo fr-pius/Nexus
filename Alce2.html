@@ -352,6 +352,32 @@
       background: #fff;
     }
 
+    .solicitacao-origem {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      max-width: 100%;
+      margin-bottom: 14px;
+      padding: 6px 11px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.35px;
+      text-transform: uppercase;
+    }
+
+    .solicitacao-origem-cadastro {
+      color: #5b477d;
+      background: #f0ebf7;
+      border-left: 4px solid #8065a8;
+    }
+
+    .solicitacao-origem-solicitacao {
+      color: #315d70;
+      background: #e8f1f4;
+      border-left: 4px solid #54879b;
+    }
+
     .solicitacao-campos {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1155,6 +1181,14 @@
     function criarCartaoSolicitacao(solicitacao) {
       const cartao = document.createElement("article");
       cartao.className = "solicitacao-card";
+
+      const origem = document.createElement("div");
+      origem.className = "solicitacao-origem " +
+        (solicitacao.origem === "Cadastro de Hóspedes"
+          ? "solicitacao-origem-cadastro"
+          : "solicitacao-origem-solicitacao");
+      origem.textContent = solicitacao.origem || "Origem não identificada";
+      cartao.appendChild(origem);
 
       const campos = document.createElement("div");
       campos.className = "solicitacao-campos";

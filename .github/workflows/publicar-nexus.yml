@@ -1,0 +1,50 @@
+name: Publicar Nexus
+
+on:
+  workflow_dispatch:
+    inputs:
+      descricao:
+        description: "Descrição desta versão"
+        required: true
+        default: "Publicação autorizada pelo responsável"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-apps-script-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Instalar clasp
+        run: npm install --global @google/clasp
+
+      - name: Configurar autenticação e projeto
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          DEPLOYMENT_ID: ${{ secrets.NEXUS_DEPLOYMENT_ID }}
+        run: |
+          test -n "$CLASPRC_JSON" || { echo "O segredo CLASPRC_JSON não foi configurado."; exit 1; }
+          test -n "$DEPLOYMENT_ID" || { echo "O segredo NEXUS_DEPLOYMENT_ID não foi configurado."; exit 1; }
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          printf '{"scriptId":"1eRrLD9WIJDxnERZbT5y6cn8srBIdfoBT6vhX3jb4SxSKjAP48zco7vTq","rootDir":"."}\n' > .clasp.json
+
+      - name: Enviar código e atualizar implantação existente
+        env:
+          DESCRICAO: ${{ inputs.descricao }}
+          DEPLOYMENT_ID: ${{ secrets.NEXUS_DEPLOYMENT_ID }}
+        run: |
+          clasp push --force
+          clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "$DESCRICAO"

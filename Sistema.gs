@@ -2714,6 +2714,13 @@ function atualizarStatusSolicitacaoNexus(assinatura, novoStatus) {
   }
 }
 
+function testarIdentidadeNexus() {
+  return {
+    usuarioAtivo: Session.getActiveUser().getEmail() || "(vazio)",
+    usuarioEfetivo: Session.getEffectiveUser().getEmail() || "(vazio)"
+  };
+}
+
 
 
 

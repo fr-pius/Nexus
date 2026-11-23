@@ -1,0 +1,40 @@
+name: Sincronizar Nexus com Apps Script
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-apps-script-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Instalar clasp
+        run: npm install --global @google/clasp
+
+      - name: Configurar autenticação e projeto
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          test -n "$CLASPRC_JSON" || { echo "O segredo CLASPRC_JSON não foi configurado."; exit 1; }
+          mkdir -p "$HOME"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          printf '{"scriptId":"1eRrLD9WIJDxnERZbT5y6cn8srBIdfoBT6vhX3jb4SxSKjAP48zco7vTq","rootDir":"."}\n' > .clasp.json
+
+      - name: Enviar código ao Apps Script (sem publicar)
+        run: clasp push --force

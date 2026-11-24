@@ -1971,26 +1971,34 @@ template.nomeMes =
 // CONSULTA DO ALCE — INTERFACE WEB
 // ============================================================
 
-function consultarChegadasPeloAlce(mes) {
+function consultarChegadasPeloAlce(meses) {
 
-  const numeroMes = Number(mes);
+  const listaMeses = Array.isArray(meses)
+    ? meses.map(Number)
+    : [Number(meses)];
 
   if (
-    !Number.isInteger(numeroMes) ||
-    numeroMes < 1 ||
-    numeroMes > 12
+    !listaMeses.length ||
+    listaMeses.some(function(mes) {
+      return !Number.isInteger(mes) || mes < 1 || mes > 12;
+    })
   ) {
-
     throw new Error(
-      "Mês inválido. Informe um valor entre 1 e 12."
+      "Seleção inválida. Informe um ou mais meses entre 1 e 12."
     );
-
   }
 
+  const mesesUnicos = Array.from(new Set(listaMeses));
 
-  const lista =
-    obterListaChegadas(numeroMes);
+  let lista = [];
 
+  mesesUnicos.forEach(function(mes) {
+    lista = lista.concat(obterListaChegadas(mes));
+  });
+
+  lista.sort(function(a, b) {
+    return a.chegada - b.chegada;
+  });
 
   return lista.map(function(item) {
 
@@ -2024,9 +2032,6 @@ function consultarChegadasPeloAlce(mes) {
   });
 
 }
-// ============================================================
-// PREPARAR FOLHA DE CHEGADAS PARA IMPRESSÃO
-// ============================================================
 
 function prepararFolhaChegadas(lista, nomeMes) {
 

@@ -770,7 +770,7 @@
           </label>
 
 
-          <select id="mes">
+          <select id="mes" multiple size="4" aria-describedby="ajudaMeses">
 
             <option value="1">
               Janeiro
@@ -821,6 +821,7 @@
             </option>
 
           </select>
+          <small id="ajudaMeses">Selecione um ou mais meses. Para selecionar vários, toque ou clique nas opções desejadas.</small>
 
         </div>
 
@@ -887,8 +888,21 @@
     function consultarChegadas() {
 
 
-      const mes =
-        document.getElementById("mes").value;
+      const meses =
+        Array.from(
+          document.getElementById("mes").selectedOptions
+        ).map(function(opcao) {
+          return Number(opcao.value);
+        });
+
+      if (!meses.length) {
+        mensagem.className = "erro";
+        mensagem.textContent = "Selecione pelo menos um mês.";
+        resultado.innerHTML = "";
+        document.getElementById("controlesImpressao").style.display = "none";
+        ultimaConsulta = null;
+        return;
+      }
 
 
       const mensagem =
@@ -912,29 +926,19 @@
 
         .withSuccessHandler(function(dados) {
 
+  const nomesMeses = meses.map(obterNomeMesInterface);
+  const nomeMes = nomesMeses.join(", ");
+
   ultimaConsulta = {
-
     lista: dados,
-
-    nomeMes:
-      obterNomeMesInterface(
-        Number(mes)
-      )
-
+    nomeMes: nomeMes
   };
 
   mostrarListaChegadas({
-
     sistema: "Nexus",
-
-    mes: Number(mes),
-
-    nomeMes:
-      ultimaConsulta.nomeMes,
-
-    lista:
-      ultimaConsulta.lista
-
+    meses: meses,
+    nomeMes: nomeMes,
+    lista: ultimaConsulta.lista
   });
 
   mensagem.textContent =
@@ -962,7 +966,7 @@
         })
 
 
-        .consultarChegadasPeloAlce(mes);
+        .consultarChegadasPeloAlce(meses);
 
     }
 
@@ -1050,7 +1054,7 @@
 
 
         vazio.textContent =
-          "Não há chegadas previstas para este mês.";
+          "Não há chegadas previstas para os meses selecionados.";
 
 
         resultado.appendChild(vazio);

@@ -48,4 +48,4 @@ jobs:
           DEPLOYMENT_ID: ${{ secrets.NEXUS_DEPLOYMENT_ID }}
         run: |
           clasp push --force
-          clasp create-deployment --deploymentId "$DEPLOYMENT_ID" --description "$DESCRICAO"
+          clasp update-deployment "$DEPLOYMENT_ID" --description "$DESCRICAO"

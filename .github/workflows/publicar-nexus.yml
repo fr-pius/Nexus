@@ -8,6 +8,11 @@ on:
         required: true
         default: "Publicação autorizada pelo responsável"
         type: string
+      simular:
+        description: "Executar sem atualizar a implantação publicada"
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -42,10 +47,12 @@ jobs:
           node -e "JSON.parse(require('fs').readFileSync(process.env.HOME+'/.clasprc.json','utf8')); console.log('Credenciais JSON válidas.')"
           printf '{"scriptId":"1eRrLD9WIJDxnERZbT5y6cn8srBIdfoBT6vhX3jb4SxSKjAP48zco7vTq","rootDir":"."}\n' > .clasp.json
 
-      - name: Enviar código e atualizar implantação existente
+      - name: Enviar código ao Apps Script
+        run: clasp push --force
+
+      - name: Atualizar implantação existente
+        if: ${{ inputs.simular == false }}
         env:
           DESCRICAO: ${{ inputs.descricao }}
           DEPLOYMENT_ID: ${{ secrets.NEXUS_DEPLOYMENT_ID }}
-        run: |
-          clasp push --force
-          clasp update-deployment "$DEPLOYMENT_ID" --description "$DESCRICAO"
+        run: clasp update-deployment "$DEPLOYMENT_ID" --description "$DESCRICAO"

@@ -442,6 +442,31 @@
       font-size: 14px;
     }
 
+    /* TESTE TEMPORÁRIO DE IDENTIDADE */
+    .teste-identidade {
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px dashed #d9cfbc;
+    }
+
+    .teste-identidade-titulo {
+      color: #6d675e;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    #resultadoIdentidade {
+      margin-top: 12px;
+      padding: 12px;
+      background: #f5f1e8;
+      border: 1px solid #e0d9cc;
+      border-radius: 4px;
+      color: #414b58;
+      font-size: 14px;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+    }
+
     /* ============================================================
        RESULTADO
        ============================================================ */
@@ -862,6 +887,17 @@
       <div class="controles-impressao" id="controlesImpressao" style="display: none;">
         <button onclick="imprimirChegadas()">Imprimir</button>
       </div>
+
+      <!-- TESTE TEMPORÁRIO DE IDENTIDADE -->
+      <section class="teste-identidade" aria-labelledby="tituloTesteIdentidade">
+        <div class="teste-identidade-titulo" id="tituloTesteIdentidade">
+          Diagnóstico temporário de acesso
+        </div>
+        <button class="botao-secundario" type="button" onclick="testarIdentidade()">
+          Testar identificação do usuário
+        </button>
+        <div id="resultadoIdentidade" role="status" aria-live="polite" hidden></div>
+      </section>
 
 
     <!-- ==========================================================
@@ -1391,6 +1427,25 @@ function imprimirChegadas() {
       nomeMes
     );
 
+}
+
+function testarIdentidade() {
+  const resultado = document.getElementById("resultadoIdentidade");
+  resultado.hidden = false;
+  resultado.textContent = "Verificando a identidade no Google...";
+
+  google.script.run
+    .withSuccessHandler(function(dados) {
+      resultado.textContent =
+        "E-mail do usuário ativo: " + (dados.usuarioAtivo || "(vazio)") +
+        "\\nE-mail do usuário efetivo: " + (dados.usuarioEfetivo || "(vazio)");
+      resultado.style.whiteSpace = "pre-line";
+    })
+    .withFailureHandler(function(erro) {
+      resultado.textContent =
+        "Não foi possível realizar o teste: " + erro.message;
+    })
+    .testarIdentidadeNexus();
 }
 
 function enviarFeedback() {

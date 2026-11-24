@@ -29,11 +29,12 @@ jobs:
 
       - name: Configurar autenticação e projeto
         env:
-          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASPRC_JSON_B64: ${{ secrets.CLASPRC_JSON_B64 }}
         run: |
-          test -n "$CLASPRC_JSON" || { echo "O segredo CLASPRC_JSON não foi configurado."; exit 1; }
+          test -n "$CLASPRC_JSON_B64" || { echo "O segredo CLASPRC_JSON_B64 não foi configurado."; exit 1; }
           mkdir -p "$HOME"
-          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          printf '%s' "$CLASPRC_JSON_B64" | base64 --decode > "$HOME/.clasprc.json"
+          node -e "JSON.parse(require('fs').readFileSync(process.env.HOME+'/.clasprc.json','utf8')); console.log('Credenciais JSON válidas.')"
           printf '{"scriptId":"1eRrLD9WIJDxnERZbT5y6cn8srBIdfoBT6vhX3jb4SxSKjAP48zco7vTq","rootDir":"."}\n' > .clasp.json
 
       - name: Enviar código ao Apps Script (sem publicar)

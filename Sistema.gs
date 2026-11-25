@@ -279,9 +279,7 @@ function listaChegadas() {
 //
 // ============================================================
 
-function obterListaChegadas(
-  mes
-) {
+function obterListaChegadasInterno_(mes) {
 
   const planilha =
     SpreadsheetApp.getActiveSpreadsheet();
@@ -911,6 +909,11 @@ if (!String(nome ?? "").trim()) {
 
 }
 
+
+function obterListaChegadas(mes) {
+  exigirPermissaoNexus_("consultar_chegadas");
+  return obterListaChegadasInterno_(mes);
+}
 
 // ============================================================
 // CRIA O ESTADO ATUALIZADO DE UM REGISTRO
@@ -1865,6 +1868,8 @@ function doGet(e) {
 
     if (acao === "folhaChegadas") {
 
+  exigirPermissaoNexus_("consultar_chegadas");
+
   const token =
     e.parameter
       ? e.parameter.token
@@ -1988,12 +1993,14 @@ function consultarChegadasPeloAlce(meses) {
     );
   }
 
+  exigirPermissaoNexus_("consultar_chegadas");
+
   const mesesUnicos = Array.from(new Set(listaMeses));
 
   let lista = [];
 
   mesesUnicos.forEach(function(mes) {
-    lista = lista.concat(obterListaChegadas(mes));
+    lista = lista.concat(obterListaChegadasInterno_(mes));
   });
 
   lista.sort(function(a, b) {
@@ -2035,8 +2042,9 @@ function consultarChegadasPeloAlce(meses) {
 
 function prepararFolhaChegadas(lista, nomeMes) {
 
-  
-    const token = Utilities.getUuid();
+  exigirPermissaoNexus_("consultar_chegadas");
+
+  const token = Utilities.getUuid();
 
   const dados = {
     lista: lista || [],
@@ -2564,6 +2572,8 @@ function nexusValorParaInterface(valor) {
  * mas nunca exibe as colunas que contêm comandos de modificação.
  */
 function obterSolicitacoesPendentesNexus() {
+  exigirPermissaoNexus_("consultar_solicitacoes");
+
   const planilha = SpreadsheetApp.getActiveSpreadsheet();
   const nomesAbas = [
     "Cadastro de Hóspedes",
@@ -2638,6 +2648,8 @@ function obterSolicitacoesPendentesNexus() {
  * é recusada em vez de atingir outro hóspede.
  */
 function atualizarStatusSolicitacaoNexus(assinatura, novoStatus) {
+  exigirPermissaoNexus_("atualizar_status");
+
   const status = String(novoStatus || "").trim();
   if (!NEXUS_STATUS_VALIDOS.includes(status)) {
     throw new Error("Status inválido. Escolha uma das opções disponíveis.");
@@ -2719,11 +2731,71 @@ function atualizarStatusSolicitacaoNexus(assinatura, novoStatus) {
   }
 }
 
-function testarIdentidadeNexus() {
-  const email = Session.getActiveUser().getEmail();
-  return {
-    usuarioAtivo: email || "(vazio)"
-  };
+/**
+ * Verifica a autorização no cadastro central de acessos.
+ * A identidade vem exclusivamente da sessão Google no servidor.
+ * O sufixo "_" impede a chamada direta pelo cliente via google.script.run.
+ */
+function exigirPermissaoNexus_(operacao) {
+  const email = String(
+    Session.getActiveUser().getEmail() || ""
+  ).trim().toLowerCase();
+
+  if (!email) {
+    throw new Error(
+      "Acesso negado: não foi possível identificar sua conta Google."
+    );
+  }
+
+  const planilhaAcessos = SpreadsheetApp.openById(
+    "1tT8PRv3VBEjL7Jp_1dUcDPqQ3BtdplYLigG3bT2DZL8"
+  );
+
+  const aba = planilhaAcessos.getSheetByName("Permissoes");
+
+  if (!aba) {
+    throw new Error(
+      "O controle de acessos está indisponível. Contate o responsável pelo Nexus."
+    );
+  }
+
+  const ultimaColuna = aba.getLastColumn();
+  const ultimaLinha = aba.getLastRow();
+
+  if (ultimaColuna < 1 || ultimaLinha < 2) {
+    throw new Error(
+      "Acesso negado: sua conta não está autorizada para esta operação."
+    );
+  }
+
+  const cabecalhos = aba
+    .getRange(1, 1, 1, ultimaColuna)
+    .getDisplayValues()[0];
+
+  const indiceOperacao = cabecalhos.findIndex(function(cabecalho) {
+    return String(cabecalho || "").trim() === operacao;
+  });
+
+  if (indiceOperacao < 0) {
+    throw new Error(
+      "Acesso negado: sua conta não está autorizada para esta operação."
+    );
+  }
+
+  const emailsAutorizados = aba
+    .getRange(2, indiceOperacao + 1, ultimaLinha - 1, 1)
+    .getDisplayValues()
+    .map(function(linha) {
+      return String(linha[0] || "").trim().toLowerCase();
+    });
+
+  if (!emailsAutorizados.includes(email)) {
+    throw new Error(
+      "Acesso negado: sua conta não está autorizada para esta operação."
+    );
+  }
+
+  return email;
 }
 
 

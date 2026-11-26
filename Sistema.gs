@@ -1779,7 +1779,8 @@ function doGet(e) {
 
       return HtmlService
         .createHtmlOutputFromFile("Alce2")
-        .setTitle("ALCE — Nexus");
+        .setTitle("ALCE — Nexus")
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 
     }
 
